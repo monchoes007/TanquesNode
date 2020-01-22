@@ -1,0 +1,181 @@
+<html>
+	<head>
+		<script type='text/javascript' src='node_modules/socket.io-client/dist/socket.io.js'></script>
+		<script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+		
+		<title>Jusanito</title>
+		<style>
+			.derecha{
+				text-align: right;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="nick">
+			<input type="text" id="nombre" placeholder="Escribir el nick">
+			<button onclick="envia_nick()">Enviar</button><br>
+			<button onclick="desconecta()">Desconectar</button>
+		</div>
+		<button onclick="socket.emit('mueve','W');">W</button>
+			<button onclick="socket.emit('mueve','N');">N</button>
+			<button onclick="socket.emit('mueve','E');">E</button>
+			<button onclick="socket.emit('mueve','S');">S</button>
+		<div id="tablero" style="position: absolute; top: 12vh; left: 5px; width: 500px; height: 500px; background-color: tomato">
+			<img id="manzana" src="imagenes/manzana.png" style="position:absolute">
+		</div>
+		<div id="chat" style="position: absolute; top: 12vh; left: 525px; width: 400px; height: 500px; background-color: cyan">
+			<input 
+				id="mensaje"
+				type="text" 
+				placeholder="Escribe algo..." 
+				style="position: absolute; top: 5px; left: 5px; width: 390px; height: 30px;">
+			<button 
+				style="position: absolute; top: 40px; left: 5px; width: 390px; height: 30px;"
+				onclick="enviar()">Enviar mensaje</button>
+			<div 
+				id="mensajes"
+				style="position: absolute; top: 75px; left: 5px; width: 390px; height: 420px;background-color: yellow"
+			></div>
+		</div>
+		<script>
+			var channel='127.0.0.1:3000';
+			var socket;
+			var miindice;
+			socket = io.connect(channel);
+				 
+				socket.on('connect',function() 
+					{
+					//$('#nick').hide();
+					});
+				socket.on('indice',function(datos){
+					miindice=datos;
+					});
+				socket.on('disconnect',function() 
+					{
+					$('#nick').show();
+					});
+				socket.on('mensaje',function(datos) 
+					{
+					$('#conversacion').append(datos);
+					});
+				socket.on('manzana',function(datos){
+					dibuja_manzana(datos);
+					});
+				socket.on('gusano',function(gusano){
+					dibuja_gusano(gusano);
+					});
+				socket.on('chat',function(texto){
+					$("#mensajes").append("<p>"+texto+"</p>");
+				});
+			
+			$(document).on( "swipeleft swiperight swipeup swipedown", $("#tablero"), function( e ) 
+				{
+				if ( e.type === "swipeleft" ) 
+					gusano.mueve("W");
+				else if ( e.type === "swiperight" ) 
+					gusano.mueve("E");
+				else if ( e.type === "swipeup" ) 
+					gusano.mueve("N");
+				else if ( e.type === "swipedown" ) 
+					gusano.mueve("S");
+				});
+			var escala=10;
+			
+			$(document).keypress(operaEvento);
+			function operaEvento(evento)
+				{
+				if(evento.which==56)
+					socket.emit('mueve','N');
+				if(evento.which==50)
+					socket.emit('mueve','S');
+				if(evento.which==52)
+					socket.emit('mueve','W');
+				if(evento.which==54)
+					socket.emit('mueve','E');
+				}
+			
+			function dibuja_manzana(manzana)
+				{
+				$("#manzana").css("left",manzana.pos_x*escala+"px");
+				$("#manzana").css("top",manzana.pos_y*escala+"px");
+				}
+				
+			function dibuja_gusano(gusano)
+				{
+				if($('#gusano_'+gusano.indice+'_segmento_0').length)
+					{
+					if(gusano.segmento_x.length)
+						{
+						for(i=gusano.segmento_x.length-1;i>=0;i--)
+							{
+							if($('#gusano_'+gusano.indice+'_segmento_'+i).length)
+								{
+								$('#gusano_'+gusano.indice+'_segmento_'+i).css("top",gusano.segmento_y[i]*escala+'px');
+								$('#gusano_'+gusano.indice+'_segmento_'+i).css("left",gusano.segmento_x[i]*escala+"px"); 
+								}
+							else
+								{
+								imga = $('<img id="gusano_'+gusano.indice+'_segmento_'+i+'">');
+								if(gusano.indice==miindice)
+									imga.attr('src', 'imagenes/cuerpo.png');
+								else
+									imga.attr('src', 'imagenes/cuerpo_2.png');
+								imga.css("position","absolute");
+								imga.css("top",gusano.segmento_y[i]*escala+'px');
+								imga.css("left",gusano.segmento_x[i]*escala+"px"); 
+								imga.appendTo('#tablero');
+								}
+							}
+						}
+					}
+				else
+					{
+					for(i=gusano.segmento_x.length-1;i>0;i--)
+						{
+						imga = $('<img id="gusano_'+gusano.indice+'_segmento_'+i+'">');
+						if(gusano.indice==miindice)
+							imga.attr('src', 'imagenes/cuerpo.png');
+						else
+							imga.attr('src', 'imagenes/cuerpo_2.png');
+						imga.css("position","absolute");
+						imga.css("top",gusano.segmento_y[i]*escala+'px');
+						imga.css("left",gusano.segmento_x[i]*escala+"px"); 
+						imga.appendTo('#tablero');
+						}
+					imga = $('<img id="gusano_'+gusano.indice+'_segmento_0">');
+					if(gusano.indice==miindice)
+						imga.attr('src', 'imagenes/gusano.png');
+					else
+						imga.attr('src', 'imagenes/gusano_2.png');
+					imga.css("position","absolute");
+					imga.css("top",gusano.segmento_y[0]*escala+'px');
+					imga.css("left",gusano.segmento_x[0]*escala+"px"); 
+					imga.appendTo('#tablero');
+					
+					}				
+				}		
+			function envia_nick()
+				{
+				
+				socket.emit('nick',$('#nombre').val());
+				$('#nick').hide();
+				}
+			function enviar()
+			{
+				if($('#mensaje').val())
+				{
+					socket.emit('chat',$('#mensaje').val());
+					$("#mensajes").append("<p class='derecha'>"+$('#mensaje').val()+"</p>");
+					$('#mensaje').val("");
+				}
+			}
+		</script>
+	</body>
+</html>
+
+
+
+
+
+
+
